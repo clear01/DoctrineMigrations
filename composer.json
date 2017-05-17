@@ -1,5 +1,5 @@
 {
-	"name": "zenify/doctrine-migrations",
+	"name": "clear01/doctrine-migrations",
 	"description": "Implementation of Doctrine Migrations to Nette",
 	"license": "MIT",
 	"authors": [
