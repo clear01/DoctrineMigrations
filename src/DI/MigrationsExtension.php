@@ -11,8 +11,10 @@ namespace Zenify\DoctrineMigrations\DI;
 
 use Arachne\EventDispatcher\DI\EventDispatcherExtension;
 use Doctrine\DBAL\Migrations\Tools\Console\Command\AbstractCommand;
+use Flame\Modules\Providers\IParametersProvider;
 use Nette\DI\Compiler;
 use Nette\DI\CompilerExtension;
+use Nette\DI\ServiceDefinition;
 use Symfony\Component\Console\Application;
 use Zenify\DoctrineMigrations\CodeStyle\CodeStyle;
 use Zenify\DoctrineMigrations\Configuration\Configuration;
@@ -20,7 +22,7 @@ use Zenify\DoctrineMigrations\EventSubscriber\ChangeCodingStandardEventSubscribe
 use Zenify\DoctrineMigrations\EventSubscriber\RegisterMigrationsEventSubscriber;
 use Zenify\DoctrineMigrations\EventSubscriber\SetConsoleOutputEventSubscriber;
 use Zenify\DoctrineMigrations\Exception\DI\MissingExtensionException;
-
+use Zenify\DoctrineMigrations\IMigrationsProvider;
 
 final class MigrationsExtension extends CompilerExtension
 {
@@ -70,7 +72,13 @@ final class MigrationsExtension extends CompilerExtension
 			->setClass(CodeStyle::class)
 			->setArguments([$config['codingStandard']]);
 
-		$this->addConfigurationDefinition($config);
+		$configurationDefinition = $this->addConfigurationDefinition($config);
+
+		foreach ($this->compiler->getExtensions() as $extension) {
+			if ($extension instanceof IMigrationsProvider) {
+				$configurationDefinition->addSetup('registerMigrationsFromDirectory', [$extension->getMigrationsDir()]);
+			}
+		}
 	}
 
 
@@ -84,7 +92,7 @@ final class MigrationsExtension extends CompilerExtension
 	}
 
 
-	private function addConfigurationDefinition(array $config)
+	private function addConfigurationDefinition(array $config): ServiceDefinition
 	{
 		$containerBuilder = $this->getContainerBuilder();
 		$configurationDefinition = $containerBuilder->addDefinition($this->prefix('configuration'));
@@ -101,6 +109,8 @@ final class MigrationsExtension extends CompilerExtension
 		} elseif ($config['versionsOrganization'] === Configuration::VERSIONS_ORGANIZATION_BY_YEAR_AND_MONTH) {
 			$configurationDefinition->addSetup('setMigrationsAreOrganizedByYearAndMonth');
 		}
+
+		return $configurationDefinition;
 	}
 
 
